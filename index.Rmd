@@ -1,0 +1,20 @@
+---
+title: "What qualities are correlated with a high grossing film?"
+author: "<YOUR NAME HERE>"
+date: "3/28/2022"
+output:
+  html_document:
+    theme: yeti
+    highlight: textmate
+    toc: TRUE
+    toc_float: TRUE
+    df_print: paged
+    code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,
+                      message = FALSE,
+                      warning = FALSE)
+```
+
