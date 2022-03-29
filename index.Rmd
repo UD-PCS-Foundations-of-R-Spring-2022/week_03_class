@@ -1,6 +1,6 @@
 ---
 title: "What qualities are correlated with a high grossing film?"
-author: "<YOUR NAME HERE>"
+author: "Ryan Harrington"
 date: "3/28/2022"
 output:
   html_document:
@@ -16,5 +16,334 @@ output:
 knitr::opts_chunk$set(echo = TRUE,
                       message = FALSE,
                       warning = FALSE)
+```
+
+```{r}
+library(tidyverse)
+```
+
+# Reading your data
+
+```{r}
+movies <- read_csv("Data_Transformations/movies_clean.csv")
+```
+```{r}
+# View(movies)
+```
+
+```{r}
+summary(movies)
+```
+
+```{r}
+str(movies)
+```
+
+```{r}
+glimpse(movies)
+```
+
+# Select
+
+```{r}
+select(movies, id, original_title, budget, popularity)
+```
+
+```{r}
+select(movies, -keywords)
+```
+
+```{r}
+select(movies, id, original_title, genre_Action:genre_TV)
+```
+
+```{r}
+select(movies, id, original_title, starts_with("genre"))
+```
+
+## Creating the `movies_sel` dataset
+
+* id
+* contain "title"
+* original_language
+* budget
+* contains "vote"
+* starts with "release"
+* is a double
+* starts with "genre"
+
+```{r}
+movies_sel <-
+  select(movies, 
+         id, contains("title"), contains("original"), budget, contains("vote"),
+         starts_with("release"), where(is.double), starts_with("genre"))
+```
+
+# `filter`
+
+```{r}
+glimpse(movies_sel)
+```
+Which movies are action movies?
+
+```{r}
+filter(movies_sel,
+       genre_Action)
+```
+
+What movies have a vote average over 7.5?
+
+```{r}
+filter(movies_sel,
+       vote_average > 7.5)
+```
+What action movies have an average voter rating over 7.5?
+
+```{r}
+filter(movies_sel, 
+       genre_Action, 
+       vote_average > 7.5)
+```
+How many movies have an original language in English, French, Spanish, or Italian?
+"en", "fr", "es", "it"
+
+```{r}
+filter(movies_sel,
+       original_language == "en" | original_language == "fr" | original_language == "es" | original_language == "it")
+```
+
+Given the numbers 1 through 100, which of those numbers are in 1 through 10?
+
+```{r}
+1:100 %in% 1:10
+```
+
+```{r}
+filter(movies_sel,
+       original_language %in% c("en", "fr", "es", "it"))
+```
+
+```{r}
+romance_languages <- c("en", "fr", "es", "it", "po")
+
+filter(movies_sel,
+       original_language %in% romance_languages)
+```
+
+# `arrange`
+
+What movie is most expensive to produce? Which movie has the highest budget?
+
+```{r}
+arrange(movies_sel,
+        desc(budget))
+```
+```{r}
+arrange(movies_sel,
+        release_year, desc(budget))
+```
+
+# `mutate`
+
+What movie has the highest profit?
+
+```{r}
+mutate(movies_sel,
+       profit = revenue - budget)
+```
+How does the runtime for each movie compare to the average runtime for all movies?
+
+```{r}
+mutate(movies_sel,
+       runtime_diff = runtime - mean(runtime, na.rm = TRUE),
+       budget_diff = budget - mean(budget, na.rm = TRUE))
+```
+
+# `summarize`
+
+What is the median and mean budget for all movies?
+
+```{r}
+summarize(movies_sel,
+          budget_median = median(budget, na.rm = TRUE),
+          budget_mean = mean(budget, na.rm = TRUE))
+```
+# `group_by` / `ungroup`
+
+What was the average budget by release year?
+
+```{r}
+movies_group <- 
+  group_by(movies_sel,
+           release_year)
+```
+
+```{r}
+summarize(movies_group,
+          budget_median = median(budget, na.rm = TRUE),
+          budget_mean = mean(budget, na.rm = TRUE))
+```
+
+What movie released in 2001 had the highest budget?
+
+```{r}
+movies_selected <- select(movies, id, original_title, budget, release_year)
+movies_filtered <- filter(movies_selected, release_year == 2001)
+arrange(movies_filtered, desc(budget))
+```
+
+# Piping `%>%`
+
+```{r}
+movies_sel %>% 
+  select(id, original_title, budget, release_year) %>% 
+  filter(release_year == 2001) %>% 
+  arrange(desc(budget))
+```
+```{r}
+movies_sel %>% select(id)
+```
+What movie had the highest vote average overall?
+
+* select
+* mutate
+* filter
+* arrange
+* summarize
+* group_by / ungroup
+
+
+```{r}
+movies_sel %>% 
+  arrange(desc(vote_average))
+```
+
+```{r}
+movies_sel %>% 
+  filter(vote_average == max(vote_average))
+```
+
+What movie had the highest vote average for movies released after 2010?
+
+```{r}
+movies_sel %>% 
+  filter(release_year > 2010) %>% 
+  arrange(desc(vote_average))
+```
+
+What movie had the highest vote average for movies with a vote counter greater than the median released after 2010?
+
+```{r}
+movies_sel %>% 
+  filter(release_year > 2010,
+         vote_count > median(vote_count, na.rm = TRUE)) %>% 
+  arrange(desc(vote_average))
+```
+
+What movie had the highest vote average for movies that made at least double of their budget?
+
+```{r}
+movies %>% 
+  filter(budget > 0) %>% 
+  mutate(budget_double = budget * 2) %>% 
+  filter(revenue >= budget_double) %>% 
+  arrange(desc(vote_average))
+```
+
+```{r}
+movies %>% 
+  filter(budget > 0) %>% 
+  mutate(revenue_percent = (revenue - budget) / budget) %>% 
+  filter(revenue_percent >= 2) %>% 
+  arrange(desc(vote_average))
+```
+
+How many movies are represented from each language?
+
+```{r}
+movies_sel %>% 
+  group_by(original_language) %>% 
+  summarize(count = n()) %>% 
+  ungroup() %>% 
+  arrange(desc(count))
+```
+
+```{r}
+movies_sel %>% 
+  count(original_language, sort = T, name = "count")
+```
+
+How much total budget was used across each original language?
+
+```{r}
+movies_sel %>% 
+  group_by(original_language) %>% 
+  summarize(budget_total = sum(budget)) %>% 
+  ungroup() %>% 
+  arrange(desc(budget_total))
+```
+
+How did vote averages change for English language films over time?
+
+```{r}
+movies_english_over_time <- 
+  movies_sel %>% 
+  filter(original_language == "en") %>% 
+  group_by(release_year) %>% 
+  summarize(vote_average = mean(vote_average)) %>% 
+  ungroup()
+
+
+movies_english_over_time %>% 
+  ggplot(aes(x = release_year,
+             y = vote_average)) + 
+  geom_point()
+```
+
+How many movie titles match their original title? How many did not?
+
+```{r}
+movies_sel %>% 
+  mutate(title_match_flag = title == original_title) %>% 
+  count(title_match_flag) %>% 
+  ggplot(aes(x = n,
+             y = title_match_flag)) +
+  geom_col()
+```
+
+```{r}
+movies_sel %>% 
+  mutate(title_match_flag = title == original_title) %>% 
+  count(release_year, title_match_flag)
+```
+
+What was the highest budget movie by release year?
+
+```{r}
+movies_sel %>% 
+  group_by(release_year) %>% 
+  filter(budget == max(budget)) %>% 
+  ungroup() %>% 
+  select(release_year, budget, title) %>% 
+  arrange(release_year)
+```
+
+```{r, eval = FALSE}
+library(tidyverse)
+movies_sel_sample <- 
+  structure(list(id = c(19995, 285, 206647, 49026, 49529, 559), 
+                 title = c("Avatar", "Pirates of the Caribbean: At World's End", 
+                           "Spectre", "The Dark Knight Rises", "John Carter", "Spider-Man 3"
+                 ), original_language = c("en", "en", "en", "en", "en", "en"
+                 ), vote_average = c(7.2, 6.9, 6.3, 7.6, 6.1, 5.9)), row.names = c(NA, 
+                                                                                   -6L), class = c("tbl_df", "tbl", "data.frame"))
+
+movies_sel_sample %>% 
+  group_by(original_language) %>% 
+  summarize(vote_average = mean(vote_average, na.rm = T)) %>% 
+  ungroup() %>% 
+  ggplot(aes(x = vote_average,
+             y = original_language)) %>% 
+  geom_col()
 ```
 
